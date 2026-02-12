@@ -1,9 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { api } from "@/lib/api";
 
-/* ============================
-   STATUS CARD
-============================ */
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
+
+/* =========================
+   SMALL STAT CARD
+========================= */
 function StatCard({ title, value = 0, color }) {
   return (
     <div
@@ -15,13 +27,16 @@ function StatCard({ title, value = 0, color }) {
   );
 }
 
+/* =========================
+   DASHBOARD
+========================= */
 export default function DepartmentHeadDashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  /* ============================
-     LOAD DASHBOARD
-  ============================ */
+  /* =========================
+     LOAD
+  ========================= */
   const load = async () => {
     try {
       const res = await api.get("/department-head/dashboard");
@@ -33,11 +48,23 @@ export default function DepartmentHeadDashboard() {
 
   useEffect(() => {
     load();
-
-    // ✅ auto refresh every 10s (optional but useful)
     const timer = setInterval(load, 10000);
     return () => clearInterval(timer);
   }, []);
+
+  /* =========================
+     HOOKS MUST BE BEFORE RETURN
+  ========================= */
+  const chartData = useMemo(() => {
+    if (!data?.projects) return [];
+
+    return [
+      { name: "Not Started", value: data.projects.notStarted },
+      { name: "In Progress", value: data.projects.inProgress },
+      { name: "Completed", value: data.projects.completed },
+      { name: "Blocked", value: data.projects.blocked },
+    ];
+  }, [data]);
 
   if (loading) {
     return (
@@ -54,55 +81,98 @@ export default function DepartmentHeadDashboard() {
     projects = {},
   } = data || {};
 
+  const progressPercent = projects.total
+    ? Math.round((projects.completed / projects.total) * 100)
+    : 0;
+
+  const COLORS = ["#94a3b8", "#3b82f6", "#22c55e", "#ef4444"];
+
+  /* =========================
+     UI
+  ========================= */
   return (
-    <div className="space-y-8">
-      {/* ================= HEADER ================= */}
+    <div className="space-y-10">
+
+      {/* HEADER */}
       <div>
         <h1 className="text-2xl font-bold">
           {department?.name} Dashboard
         </h1>
-        <p className="text-gray-500">
-          Overview of your department activity
+        <p className="text-gray-500 text-sm">
+          Department performance overview
         </p>
       </div>
 
-      {/* ================= PEOPLE ================= */}
+      {/* ================= KPIs ================= */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatCard title="Team Leads" value={teamLeads} />
         <StatCard title="Employees" value={employees} />
         <StatCard title="Total Projects" value={projects.total} />
       </div>
 
-      {/* ================= PROJECT STATUS ================= */}
-      <div>
-        <h2 className="text-lg font-semibold mb-3">
-          Project Status
-        </h2>
+      {/* ================= PROGRESS BAR ================= */}
+      <div className="bg-white rounded-2xl border p-5 shadow-sm">
+        <div className="flex justify-between text-sm mb-2">
+          <span>Completion Rate</span>
+          <span className="font-semibold">{progressPercent}%</span>
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <StatCard
-            title="Not Started"
-            value={projects.notStarted}
-            color="border-gray-200"
+        <div className="h-3 bg-gray-100 rounded">
+          <div
+            className="h-3 bg-green-500 rounded transition-all"
+            style={{ width: `${progressPercent}%` }}
           />
+        </div>
+      </div>
 
-          <StatCard
-            title="In Progress"
-            value={projects.inProgress}
-            color="border-blue-300 bg-blue-50"
-          />
+      {/* ================= STATUS CARDS ================= */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <StatCard title="Not Started" value={projects.notStarted} />
+        <StatCard title="In Progress" value={projects.inProgress} />
+        <StatCard title="Completed" value={projects.completed} />
+        <StatCard title="Blocked" value={projects.blocked} />
+      </div>
 
-          <StatCard
-            title="Completed"
-            value={projects.completed}
-            color="border-green-300 bg-green-50"
-          />
+      {/* ================= CHARTS ================= */}
+      <div className="grid md:grid-cols-2 gap-6">
 
-          <StatCard
-            title="Blocked"
-            value={projects.blocked}
-            color="border-red-300 bg-red-50"
-          />
+        {/* BAR CHART */}
+        <div className="bg-white rounded-2xl border p-6 shadow-sm">
+          <h3 className="font-semibold mb-4">
+            Project Status Distribution
+          </h3>
+
+          <ResponsiveContainer width="100%" height={250}>
+            <BarChart data={chartData}>
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey="value" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* PIE CHART */}
+        <div className="bg-white rounded-2xl border p-6 shadow-sm">
+          <h3 className="font-semibold mb-4">
+            Status Breakdown
+          </h3>
+
+          <ResponsiveContainer width="100%" height={250}>
+            <PieChart>
+              <Pie
+                data={chartData}
+                dataKey="value"
+                outerRadius={90}
+                label
+              >
+                {chartData.map((_, i) => (
+                  <Cell key={i} fill={COLORS[i]} />
+                ))}
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>

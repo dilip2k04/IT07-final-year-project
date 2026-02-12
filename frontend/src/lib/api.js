@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: "http://192.168.1.3:5000/api", // ← MUST BE 5000, NOT 3000!
+  baseURL: "http://192.168.124.1:5000/api", // ← MUST BE 5000, NOT 3000!
   headers: {
     'Content-Type': 'application/json',
   },

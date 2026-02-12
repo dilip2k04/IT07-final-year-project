@@ -4,14 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ChevronDown, ChevronRight, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Input } from "@/components/ui/input";
 
 export default function MyTasks() {
   const [tasks, setTasks] = useState([]);
   const [openProjects, setOpenProjects] = useState({});
+  const [search, setSearch] = useState("");
   const navigate = useNavigate();
 
   /* =========================
-     LOAD TASKS
+     LOAD
   ========================= */
   const load = async () => {
     const res = await api.get("/tasks/my");
@@ -23,32 +25,38 @@ export default function MyTasks() {
   }, []);
 
   /* =========================
-     🚀 OPTIMISTIC STATUS UPDATE
-     (no reload)
+     OPTIMISTIC UPDATE
   ========================= */
   const updateStatus = async (id, status) => {
-    // instant UI update
     setTasks((prev) =>
-      prev.map((t) =>
-        t._id === id ? { ...t, status } : t
-      )
+      prev.map((t) => (t._id === id ? { ...t, status } : t))
     );
 
     try {
       await api.put(`/tasks/${id}/status`, { status });
     } catch {
-      // revert if failed
       load();
     }
   };
 
   /* =========================
-     GROUP TASKS BY PROJECT
+     FILTER
+  ========================= */
+  const filtered = useMemo(() => {
+    if (!search) return tasks;
+
+    return tasks.filter((t) =>
+      t.title.toLowerCase().includes(search.toLowerCase())
+    );
+  }, [tasks, search]);
+
+  /* =========================
+     GROUP
   ========================= */
   const grouped = useMemo(() => {
     const map = {};
 
-    for (const t of tasks) {
+    for (const t of filtered) {
       const pid = t.projectId?._id;
       if (!pid) continue;
 
@@ -63,11 +71,19 @@ export default function MyTasks() {
     }
 
     return map;
-  }, [tasks]);
+  }, [filtered]);
 
   /* =========================
-     STATUS COLORS
+     GLOBAL STATS
   ========================= */
+  const stats = useMemo(() => {
+    return {
+      total: tasks.length,
+      progress: tasks.filter((t) => t.status === "IN_PROGRESS").length,
+      done: tasks.filter((t) => t.status === "DONE").length,
+    };
+  }, [tasks]);
+
   const statusColor = (status) => {
     switch (status) {
       case "DONE":
@@ -83,24 +99,52 @@ export default function MyTasks() {
      UI
   ========================= */
   return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold">My Tasks</h2>
+    <div className="space-y-8">
 
+      {/* HEADER */}
+      <div>
+        <h1 className="text-2xl font-bold">My Tasks</h1>
+        <p className="text-gray-500 text-sm">
+          Track and update your assigned work
+        </p>
+      </div>
+
+      {/* STATS */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <StatCard title="Total Tasks" value={stats.total} />
+        <StatCard title="In Progress" value={stats.progress} />
+        <StatCard title="Completed" value={stats.done} />
+      </div>
+
+      {/* SEARCH */}
+      <div className="flex justify-end">
+        <Input
+          placeholder="Search tasks..."
+          className="w-72"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
+
+      {/* PROJECT GROUPS */}
       {Object.entries(grouped).map(([projectId, project]) => {
         const done = project.tasks.filter(
           (t) => t.status === "DONE"
         ).length;
+
+        const progressPercent =
+          (done / project.tasks.length) * 100;
 
         const isOpen = openProjects[projectId];
 
         return (
           <div
             key={projectId}
-            className="rounded-xl border bg-white shadow-sm"
+            className="rounded-2xl border bg-white shadow-sm overflow-hidden"
           >
-            {/* ================= PROJECT HEADER ================= */}
+            {/* HEADER */}
             <div
-              className="flex items-center justify-between p-4 cursor-pointer hover:bg-muted"
+              className="flex items-center justify-between p-5 cursor-pointer hover:bg-gray-50"
               onClick={() =>
                 setOpenProjects((p) => ({
                   ...p,
@@ -116,10 +160,10 @@ export default function MyTasks() {
                 )}
 
                 <div>
-                  <div className="font-semibold">
+                  <div className="font-semibold text-lg">
                     {project.name}
                   </div>
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-xs text-gray-500">
                     {done}/{project.tasks.length} completed
                   </div>
                 </div>
@@ -130,7 +174,6 @@ export default function MyTasks() {
                   {project.tasks.length} Tasks
                 </Badge>
 
-                {/* ✅ documents route (global) */}
                 <Button
                   size="sm"
                   variant="outline"
@@ -140,26 +183,31 @@ export default function MyTasks() {
                   }}
                 >
                   <FileText className="w-4 h-4 mr-1" />
-                  Documents
+                  Docs
                 </Button>
               </div>
             </div>
 
-            {/* ================= TASK LIST ================= */}
+            {/* PROGRESS BAR */}
+            <div className="h-2 bg-gray-100">
+              <div
+                className="h-2 bg-green-500 transition-all"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+
+            {/* TASKS */}
             {isOpen && (
               <div className="divide-y">
                 {project.tasks.map((t) => (
                   <div
                     key={t._id}
-                    className="flex items-center justify-between p-4 hover:bg-muted/50"
+                    className="flex items-center justify-between p-4 hover:bg-gray-50"
                   >
-                    <div className="space-y-1">
-                      <div className="font-medium">
-                        {t.title}
-                      </div>
-
+                    <div>
+                      <div className="font-medium">{t.title}</div>
                       <Badge
-                        className={statusColor(t.status)}
+                        className={`mt-1 ${statusColor(t.status)}`}
                       >
                         {t.status.replace("_", " ")}
                       </Badge>
@@ -171,10 +219,7 @@ export default function MyTasks() {
                           size="sm"
                           variant="outline"
                           onClick={() =>
-                            updateStatus(
-                              t._id,
-                              "IN_PROGRESS"
-                            )
+                            updateStatus(t._id, "IN_PROGRESS")
                           }
                         >
                           In Progress
@@ -199,6 +244,18 @@ export default function MyTasks() {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/* =========================
+   STAT CARD
+========================= */
+function StatCard({ title, value }) {
+  return (
+    <div className="p-5 rounded-2xl border bg-white shadow-sm">
+      <p className="text-sm text-gray-500">{title}</p>
+      <p className="text-3xl font-bold">{value}</p>
     </div>
   );
 }

@@ -1,11 +1,25 @@
-// DashboardLayout.jsx - Make sure it has export default
-import { Outlet, useNavigate, Link } from "react-router-dom";
+import { Outlet, useNavigate, Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { getUser, logout as doLogout } from "@/lib/auth";
 
-function DashboardLayout() {
+import {
+  LayoutDashboard,
+  Users,
+  Building2,
+  FolderKanban,
+  CheckSquare,
+  Bot,
+  LogOut,
+} from "lucide-react";
+import Meetings from "@/pages/common/Meetings";
+
+/* =========================
+   MAIN LAYOUT
+========================= */
+export default function DashboardLayout() {
   const user = getUser();
   const navigate = useNavigate();
+  const location = useLocation();
 
   if (!user) {
     navigate("/login");
@@ -18,31 +32,54 @@ function DashboardLayout() {
   };
 
   return (
-    <div className="flex h-screen">
-      <aside className="w-64 bg-zinc-900 text-white flex flex-col">
-        <div className="p-4 text-xl font-bold border-b border-zinc-800">
+    <div className="flex h-screen bg-zinc-100">
+
+      {/* ================= SIDEBAR ================= */}
+      <aside className="w-64 bg-zinc-900 text-white flex flex-col shadow-xl">
+
+        {/* Logo */}
+        <div className="h-16 flex items-center px-6 font-bold text-lg border-b border-zinc-800">
           Company AI
         </div>
 
-        <nav className="flex-1 p-4 space-y-2">
-          <SidebarLinks role={user.role} />
+        {/* User Info */}
+        <div className="px-6 py-4 border-b border-zinc-800 text-sm text-zinc-300">
+          <div className="font-medium text-white">{user.name}</div>
+          <div className="capitalize text-xs mt-1">
+            {user.role.replace("_", " ").toLowerCase()}
+          </div>
+        </div>
+
+        {/* Nav */}
+        <nav className="flex-1 p-3 space-y-1">
+          <SidebarLinks role={user.role} location={location} />
         </nav>
 
+        {/* Logout */}
         <div className="p-4 border-t border-zinc-800">
-          <Button variant="destructive" className="w-full" onClick={logout}>
+          <Button
+            variant="destructive"
+            className="w-full flex items-center gap-2"
+            onClick={logout}
+          >
+            <LogOut size={16} />
             Logout
           </Button>
         </div>
       </aside>
 
-      <div className="flex-1 flex flex-col">
-        <header className="h-14 border-b flex items-center px-6 bg-white">
-          <h1 className="font-semibold capitalize">
+      {/* ================= CONTENT ================= */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+
+        {/* Header */}
+        <header className="h-16 bg-white shadow-sm border-b flex items-center px-8">
+          <h1 className="font-semibold text-lg capitalize">
             {user.role.replace("_", " ")} Dashboard
           </h1>
         </header>
 
-        <main className="flex-1 p-6 bg-zinc-50">
+        {/* Page Content */}
+        <main className="flex-1 overflow-y-auto p-8">
           <Outlet />
         </main>
       </div>
@@ -50,46 +87,64 @@ function DashboardLayout() {
   );
 }
 
-function SidebarLinks({ role }) {
+/* =========================
+   SIDEBAR LINKS
+========================= */
+function SidebarLinks({ role, location }) {
   const links = {
     CEO: [
-      { label: "Dashboard", path: "" },
-      { label: "Departments", path: "departments" },
-      { label: "Users", path: "users" },
-      { label: "Projects", path: "projects" },
-      { label: "AI Assistant", path: "ai" } // Changed from "/ai" to "ai"
+      { label: "Dashboard", path: "", icon: LayoutDashboard },
+      { label: "Departments", path: "departments", icon: Building2 },
+      { label: "Users", path: "users", icon: Users },
+      { label: "Projects", path: "projects", icon: FolderKanban },
+      { label: "AI Assistant", path: "ai", icon: Bot },
+      { label: "Meetings", path: "meetings", icon: Bot }
+
     ],
     DEPARTMENT_HEAD: [
-      { label: "Dashboard", path: "" },
-      { label: "Projects", path: "projects" },
-      { label: "AI Assistant", path: "ai" } // Changed from "/ai" to "ai"
+      { label: "Dashboard", path: "", icon: LayoutDashboard },
+      { label: "Projects", path: "projects", icon: FolderKanban },
+      { label: "AI Assistant", path: "ai", icon: Bot },
+      { label: "Meetings", path: "meetings", icon: Meetings }
     ],
     TEAM_LEAD: [
-      { label: "Dashboard", path: "" },
-      { label: "My Projects", path: "projects" },
-      { label: "AI Assistant", path: "ai" } // Changed from "/ai" to "ai"
+      { label: "Dashboard", path: "", icon: LayoutDashboard },
+      { label: "My Projects", path: "projects", icon: FolderKanban },
+      { label: "AI Assistant", path: "ai", icon: Bot },
+      { label: "Meetings", path: "meetings", icon: Meetings }
     ],
     EMPLOYEE: [
-      { label: "Dashboard", path: "" },
-      { label: "My Tasks", path: "tasks" },
-      { label: "AI Assistant", path: "ai" } // Changed from "/ai" to "ai"
+      { label: "Dashboard", path: "", icon: LayoutDashboard },
+      { label: "My Tasks", path: "tasks", icon: CheckSquare },
+      { label: "AI Assistant", path: "ai", icon: Bot },
+      { label: "Meetings", path: "meetings", icon: Meetings }
     ],
   };
 
   return (
     <>
-      {links[role]?.map((l) => (
-        <Link
-          key={l.label}
-          to={l.path}
-          className="block px-3 py-2 rounded hover:bg-zinc-800"
-        >
-          {l.label}
-        </Link>
-      ))}
+      {links[role]?.map((l) => {
+        const Icon = l.icon;
+        const active = location.pathname.endsWith(l.path);
+
+        return (
+          <Link
+            key={l.label}
+            to={l.path}
+            className={`
+              flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition
+              ${
+                active
+                  ? "bg-zinc-800 text-white"
+                  : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
+              }
+            `}
+          >
+            <Icon size={18} />
+            {l.label}
+          </Link>
+        );
+      })}
     </>
   );
 }
-
-// MAKE SURE THIS LINE IS AT THE BOTTOM
-export default DashboardLayout;

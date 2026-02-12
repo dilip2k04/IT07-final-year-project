@@ -10,6 +10,8 @@ import departmentHeadRoutes from "./modules/departmentHead/departmentHead.routes
 import taskRoutes from "./modules/tasks/tasks.routes.js";
 import documentRoutes from "./modules/projectDocuments/projectDocuments.routes.js";
 import aiRoutes from "./modules/ai/ai.routes.js";
+import ceoRoutes from "./modules/ceo/ceo.route.js";
+import meetingRoutes from "./modules/meetings/meetings.routes.js";
 
 const app = express();
 
@@ -42,5 +44,7 @@ app.use("/api/tasks", taskRoutes);
 app.use("/uploads", express.static("uploads"));
 app.use("/api/documents", documentRoutes);
 app.use("/api/ai", aiRoutes);
+app.use("/api/ceo", ceoRoutes);
+app.use("/api/meetings", meetingRoutes);
 
 export default app;
