@@ -1,70 +1,77 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import useCrud from "@/core/useCrud";
+import UniversalCrudModal from "@/components/UniversalCrudModal";
 import { api } from "@/lib/api";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { getUser } from "@/lib/auth";
 
 export default function Meetings() {
-  const [meetings, setMeetings] = useState([]);
+  const crud = useCrud("meetings");
+  const user = getUser();
 
-  const [form, setForm] = useState({
-    name: "",
-    link: "",
-    timings: "",
-    regarding: "",
-  });
+  const [users, setUsers] = useState([]);
+  const [departments, setDepartments] = useState([]);
 
-  const load = async () => {
-    const res = await api.get("/meetings");
-    setMeetings(res.data);
-  };
-
+  /* =========================
+     LOAD USERS + DEPARTMENTS
+  ========================= */
   useEffect(() => {
-    load();
+    api.get("/meta/users").then((r) => setUsers(r.data));
+    api.get("/meta/departments").then((r) =>
+      setDepartments(r.data)
+    );
   }, []);
 
-  const create = async () => {
-    await api.post("/meetings", form);
-    setForm({ name: "", link: "", timings: "", regarding: "" });
-    load();
-  };
+  /* =========================
+     FIELDS (dropdowns)
+  ========================= */
+  const fields = useMemo(
+    () => [
+      { name: "name", label: "Meeting Name" },
+      { name: "link", label: "Meeting Link" },
+      { name: "regarding", label: "Regarding" },
+
+      {
+    name: "startTime",
+    label: "Start Time",
+    type: "datetime",
+    },
+    {
+    name: "endTime",
+    label: "End Time",
+    type: "datetime",
+    },
+
+
+      /* ⭐ MULTI USER DROPDOWN */
+      {
+        name: "allowedUsers",
+        label: "Allowed Users",
+        type: "multiselect",
+        options: users.map((u) => ({
+          label: `${u.name} (${u.role})`,
+          value: u._id,
+        })),
+      },
+
+      /* ⭐ MULTI DEPARTMENT DROPDOWN */
+      {
+        name: "allowedDepartments",
+        label: "Allowed Departments",
+        type: "multiselect",
+        options: departments.map((d) => ({
+          label: d.name,
+          value: d._id,
+        })),
+      },
+    ],
+    [users, departments]
+  );
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-xl font-bold">Meetings</h2>
-
-      {/* CREATE */}
-      <div className="grid grid-cols-4 gap-2">
-        <Input
-          placeholder="Meeting name"
-          onChange={e => setForm({ ...form, name: e.target.value })}
-        />
-        <Input
-          placeholder="Meet link"
-          onChange={e => setForm({ ...form, link: e.target.value })}
-        />
-        <Input
-          type="datetime-local"
-          onChange={e => setForm({ ...form, timings: e.target.value })}
-        />
-        <Input
-          placeholder="Regarding"
-          onChange={e => setForm({ ...form, regarding: e.target.value })}
-        />
-
-        <Button onClick={create}>Schedule</Button>
-      </div>
-
-      {/* LIST */}
-      {meetings.map(m => (
-        <div key={m._id} className="border p-4 rounded bg-white">
-          <div className="font-semibold">{m.name}</div>
-          <div>{new Date(m.timings).toLocaleString()}</div>
-          <a href={m.link} target="_blank" className="text-blue-600 underline">
-            Join Meeting
-          </a>
-          <div className="text-sm text-gray-500">{m.regarding}</div>
-        </div>
-      ))}
-    </div>
+    <UniversalCrudModal
+      title="Meetings"
+      fields={fields}
+      crud={crud}
+    />
   );
 }

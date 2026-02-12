@@ -1,8 +1,10 @@
 import { Router } from "express";
 import {
   createMeeting,
-  getMyMeetings,
-  removeMeeting,
+  listMyMeetings,
+  listMeetings,
+  updateMeeting,      // ⭐
+  deleteMeeting      // ⭐
 } from "./meetings.controller.js";
 
 import { requireAuth } from "../../middlewares/auth.middleware.js";
@@ -12,7 +14,12 @@ const router = Router();
 
 router.use(requireAuth);
 
-router.get("/", getMyMeetings);
+/* ======================================
+   CRUD ROUTES
+====================================== */
+
+// used by useCrud()
+router.get("/", listMeetings);
 
 router.post(
   "/",
@@ -20,10 +27,19 @@ router.post(
   createMeeting
 );
 
+// ⭐ ADD THESE TWO
+router.put(
+  "/:id",
+  allowRoles("CEO", "DEPARTMENT_HEAD", "TEAM_LEAD"),
+  updateMeeting
+);
+
 router.delete(
   "/:id",
   allowRoles("CEO", "DEPARTMENT_HEAD", "TEAM_LEAD"),
-  removeMeeting
+  deleteMeeting
 );
+
+router.get("/my", listMyMeetings);
 
 export default router;

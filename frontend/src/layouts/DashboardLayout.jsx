@@ -105,19 +105,19 @@ function SidebarLinks({ role, location }) {
       { label: "Dashboard", path: "", icon: LayoutDashboard },
       { label: "Projects", path: "projects", icon: FolderKanban },
       { label: "AI Assistant", path: "ai", icon: Bot },
-      { label: "Meetings", path: "meetings", icon: Meetings }
+      { label: "Meetings", path: "meetings", icon: Bot }
     ],
     TEAM_LEAD: [
       { label: "Dashboard", path: "", icon: LayoutDashboard },
       { label: "My Projects", path: "projects", icon: FolderKanban },
       { label: "AI Assistant", path: "ai", icon: Bot },
-      { label: "Meetings", path: "meetings", icon: Meetings }
+      { label: "Meetings", path: "meetings", icon: Bot }
     ],
     EMPLOYEE: [
       { label: "Dashboard", path: "", icon: LayoutDashboard },
       { label: "My Tasks", path: "tasks", icon: CheckSquare },
       { label: "AI Assistant", path: "ai", icon: Bot },
-      { label: "Meetings", path: "meetings", icon: Meetings }
+      { label: "Meetings", path: "meetings", icon: Bot }
     ],
   };
 

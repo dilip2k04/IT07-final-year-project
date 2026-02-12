@@ -200,6 +200,20 @@ export default function UniversalCrudModal({ title, fields, crud }) {
                   );
                 }
 
+                if (f.type === "datetime") {
+                  return (
+                    <input
+                      key={f.name}
+                      type="datetime-local"
+                      className="border rounded px-2 py-2"
+                      value={form[f.name] || ""}
+                      onChange={(e) =>
+                        handleChange(f.name, e.target.value, f)
+                      }
+                    />
+                  );
+                }
+
                 if (f.type === "select") {
                   return (
                     <select

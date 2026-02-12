@@ -4,21 +4,27 @@ const meetingSchema = new mongoose.Schema(
   {
     name: { type: String, required: true },
     link: { type: String, required: true },
-    timings: { type: Date, required: true },
     regarding: String,
 
-    allowedUsers: [
-      { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-    ],
-
-    allowedDepartments: [
-      { type: mongoose.Schema.Types.ObjectId, ref: "Department" },
-    ],
+    startTime: Date,
+    endTime: Date,
 
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
+
+    allowedUsers: [
+      { type: mongoose.Schema.Types.ObjectId, ref: "User" }
+    ],
+
+    allowedDepartments: [
+      { type: mongoose.Schema.Types.ObjectId, ref: "Department" }
+    ],
+
+    roleScope: {
+      type: String, // ALL | DEPARTMENT | PROJECT | SPECIFIC
+    }
   },
   { timestamps: true }
 );
