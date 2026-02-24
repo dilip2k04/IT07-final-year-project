@@ -27,8 +27,6 @@ export default function UniversalCrudModal({ title, fields, crud }) {
 
   /* ============================
      🔥 SAFE PAYLOAD BUILDER
-     - Create → full payload
-     - Update → ignore empty fields
   ============================ */
   const buildPayload = () => {
     const payload = {};
@@ -36,7 +34,6 @@ export default function UniversalCrudModal({ title, fields, crud }) {
     fields.forEach((f) => {
       const v = form[f.name];
 
-      // ⛔ skip empty fields on UPDATE
       if (
         editing &&
         (v === "" ||
@@ -60,7 +57,7 @@ export default function UniversalCrudModal({ title, fields, crud }) {
   };
 
   /* ============================
-     🔥 SUBMIT HANDLER
+     🔥 SUBMIT
   ============================ */
   const submit = async () => {
     const payload = buildPayload();
@@ -75,14 +72,13 @@ export default function UniversalCrudModal({ title, fields, crud }) {
       console.error(
         err?.response?.data?.message || "Operation failed"
       );
-      return; // ⛔ stop on error
+      return;
     }
 
     setForm({});
     setEditing(null);
     setOpen(false);
 
-    // ✅ reload safely (if exists)
     if (typeof crud.list === "function") {
       crud.list();
     }
@@ -93,12 +89,6 @@ export default function UniversalCrudModal({ title, fields, crud }) {
   ============================ */
   const handleChange = (name, value, f) => {
     let newForm = { ...form, [name]: value };
-
-    if (name === "departmentId") {
-      newForm.teamLeadId = "";
-      newForm.employees = [];
-    }
-
     setForm(newForm);
     if (f.onChange) f.onChange(value, newForm);
   };
@@ -125,15 +115,48 @@ export default function UniversalCrudModal({ title, fields, crud }) {
   };
 
   /* ============================
-     🔥 DISPLAY HELPERS
+     🔥 CUSTOM VALUE RENDERING
   ============================ */
-  const renderValue = (val) => {
+  const renderValue = (val, fieldName) => {
+    // 🔵 Meeting link as button
+    if (fieldName === "link" && val) {
+  const formattedLink =
+    val.startsWith("http://") || val.startsWith("https://")
+      ? val
+      : `https://${val}`;
+
+  return (
+    <a
+      href={formattedLink}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex items-center bg-blue-600 text-white px-3 py-1 rounded-md shadow hover:bg-blue-700 transition"
+    >
+      Join Meeting
+    </a>
+  );
+}
+
+    // ⭐ Multi arrays
     if (Array.isArray(val)) {
-      return val.map((x) => x?.name || x).join(", ");
+      return val
+        .map((x) => {
+          if (x?.name && x?.role) {
+            return `${x.name} (${x.role})`; // allowedUsers
+          }
+          if (x?.name) {
+            return x.name; // departments
+          }
+          return x;
+        })
+        .join(", ");
     }
+
+    // ⭐ Object
     if (typeof val === "object" && val !== null) {
       return val.name || val._id;
     }
+
     return val;
   };
 
@@ -281,7 +304,7 @@ export default function UniversalCrudModal({ title, fields, crud }) {
             <TableRow key={row._id}>
               {fields.map((f) => (
                 <TableCell key={f.name}>
-                  {renderValue(row[f.name])}
+                  {renderValue(row[f.name], f.name)}
                 </TableCell>
               ))}
 

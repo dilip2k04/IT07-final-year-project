@@ -1,7 +1,7 @@
 import Meeting from "../../models/Meeting.js";
 
 /* ======================================================
-   ✅ CREATE MEETING
+   CREATE MEETING
 ====================================================== */
 export const createMeeting = async (req, res) => {
   try {
@@ -14,13 +14,8 @@ export const createMeeting = async (req, res) => {
       startTime,
       endTime,
       allowedUsers = [],
-      allowedDepartments = [],
+      allowedDepartments = []
     } = req.body;
-
-    // 🔐 Role restrictions
-    if (user.role === "DEPARTMENT_HEAD") {
-      allowedDepartments.push(user.departmentId);
-    }
 
     const meeting = await Meeting.create({
       name,
@@ -29,11 +24,17 @@ export const createMeeting = async (req, res) => {
       startTime,
       endTime,
       createdBy: user._id,
-      allowedUsers,
-      allowedDepartments,
+      allowedUsers,         // 🔥 ONLY this controls visibility
+      allowedDepartments    // UI purpose only
     });
 
-    res.json(meeting);
+    const populatedMeeting = await Meeting.findById(meeting._id)
+      .populate("createdBy", "name role")
+      .populate("allowedUsers", "name role")
+      .populate("allowedDepartments", "name");
+
+    res.json(populatedMeeting);
+
   } catch (e) {
     res.status(500).json({ message: e.message });
   }
@@ -41,55 +42,69 @@ export const createMeeting = async (req, res) => {
 
 
 /* ======================================================
-   ✅ LIST MY MEETINGS  ⭐ (YOU MISSED THIS)
-====================================================== */
-export const listMyMeetings = async (req, res) => {
-  try {
-    const user = req.user;
-
-    const meetings = await Meeting.find({
-      $or: [
-        { allowedUsers: user._id },
-        { allowedDepartments: user.departmentId },
-      ],
-    })
-      .populate("createdBy", "name")
-      .sort({ startTime: 1 });
-
-    res.json(meetings);
-  } catch (e) {
-    res.status(500).json({ message: e.message });
-  }
-};
-
-
-/* ======================================================
-   ⭐ LIST ALL MEETINGS (for CRUD page)
+   LIST MEETINGS
+   - CEO → See all
+   - Others → ONLY meetings where they are in allowedUsers
 ====================================================== */
 export const listMeetings = async (req, res) => {
   try {
-    const meetings = await Meeting.find()
-      .populate("createdBy", "name")
+    const user = req.user;
+
+    let filter = {};
+
+    // 🔥 Strict filtering
+    if (user.role !== "CEO") {
+      filter = {
+        allowedUsers: user._id
+      };
+    }
+
+    const meetings = await Meeting.find(filter)
+      .populate("createdBy", "name role")
+      .populate("allowedUsers", "name role")
+      .populate("allowedDepartments", "name")
       .sort({ startTime: 1 });
 
     res.json(meetings);
+
   } catch (e) {
     res.status(500).json({ message: e.message });
   }
 };
 
+
 /* ======================================================
-   UPDATE
+   UPDATE MEETING
+   - Only creator or CEO
 ====================================================== */
 export const updateMeeting = async (req, res) => {
   try {
-    const meeting = await Meeting.findByIdAndUpdate(
+    const user = req.user;
+
+    const meeting = await Meeting.findById(req.params.id);
+
+    if (!meeting) {
+      return res.status(404).json({ message: "Meeting not found" });
+    }
+
+    if (
+      user.role !== "CEO" &&
+      meeting.createdBy.toString() !== user._id.toString()
+    ) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
+    const updated = await Meeting.findByIdAndUpdate(
       req.params.id,
       req.body,
       { new: true }
-    );
+    )
+      .populate("createdBy", "name role")
+      .populate("allowedUsers", "name role")
+      .populate("allowedDepartments", "name");
 
-    res.json(meeting);
+    res.json(updated);
+
   } catch (e) {
     res.status(500).json({ message: e.message });
   }
@@ -97,12 +112,30 @@ export const updateMeeting = async (req, res) => {
 
 
 /* ======================================================
-   DELETE
+   DELETE MEETING
+   - Only creator or CEO
 ====================================================== */
 export const deleteMeeting = async (req, res) => {
   try {
+    const user = req.user;
+
+    const meeting = await Meeting.findById(req.params.id);
+
+    if (!meeting) {
+      return res.status(404).json({ message: "Meeting not found" });
+    }
+
+    if (
+      user.role !== "CEO" &&
+      meeting.createdBy.toString() !== user._id.toString()
+    ) {
+      return res.status(403).json({ message: "Not authorized" });
+    }
+
     await Meeting.findByIdAndDelete(req.params.id);
+
     res.json({ message: "Meeting deleted" });
+
   } catch (e) {
     res.status(500).json({ message: e.message });
   }
